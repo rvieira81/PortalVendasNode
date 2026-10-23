@@ -2,7 +2,7 @@
 # Front React servido pelo nginx, que também repassa /api para a API.
 #   docker build -f apps/web/Dockerfile -t portalvendas-web .
 
-FROM node:22-alpine AS build
+FROM node:25-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
