@@ -16,3 +16,6 @@ backups/
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/settings.json
+
+# Arquivos locais do Visual Studio
+.vs/
