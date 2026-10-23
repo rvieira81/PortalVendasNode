@@ -11,7 +11,7 @@ RUN npm ci --workspace apps/web --include-workspace-root --no-audit --no-fund
 COPY apps/web apps/web
 RUN npm run build -w apps/web
 
-FROM nginx:1.27-alpine
+FROM nginx:1.29-alpine
 ENV API_UPSTREAM=api:3000
 COPY deploy/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
