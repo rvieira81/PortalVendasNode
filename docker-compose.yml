@@ -1,0 +1,71 @@
+# Ambiente completo local: PostgreSQL + migrações (com dados de exemplo) + API + front.
+#   cp .env.exemplo .env   (preencha SESSAO_SEGREDO e CHAVE_CIFRAGEM)
+#   docker compose up --build
+#   Loja: http://localhost:8080   ·   API: http://localhost:3000/api/docs
+name: portalvendas
+
+x-api-env: &api-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://${POSTGRES_USER:-portal}:${POSTGRES_PASSWORD:-portal}@db:5432/${POSTGRES_DB:-portalvendas}
+  SESSAO_SEGREDO: ${SESSAO_SEGREDO:?defina SESSAO_SEGREDO no .env}
+  CHAVE_CIFRAGEM: ${CHAVE_CIFRAGEM:?defina CHAVE_CIFRAGEM no .env}
+  URL_SITE: ${URL_SITE:-http://localhost:8080}
+  NOME_LOJA: ${NOME_LOJA:-Portal de Vendas}
+  COOKIE_SEGURO: "false"          # local sem HTTPS
+  SWAGGER: "true"
+  EMAIL_PASTA: ${EMAIL_PASTA:-/dados/emails}
+  MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:-}
+  MP_PUBLIC_KEY: ${MP_PUBLIC_KEY:-}
+  MP_SEGREDO_WEBHOOK: ${MP_SEGREDO_WEBHOOK:-}
+  MP_URL_NOTIFICACAO: ${MP_URL_NOTIFICACAO:-}
+  ME_TOKEN: ${ME_TOKEN:-}
+  ME_URL_API: ${ME_URL_API:-https://sandbox.melhorenvio.com.br}
+  ME_EMAIL_CONTATO: ${ME_EMAIL_CONTATO:-contato@sualoja.com.br}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORTA: ${SMTP_PORTA:-587}
+  SMTP_USUARIO: ${SMTP_USUARIO:-}
+  SMTP_SENHA: ${SMTP_SENHA:-}
+  SMTP_REMETENTE: ${SMTP_REMETENTE:-Portal de Vendas <nao-responda@sualoja.com.br>}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-portalvendas}
+      POSTGRES_USER: ${POSTGRES_USER:-portal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-portal}
+    ports: ["${POSTGRES_PORTA:-5433}:5432"]   # 5433 para não conflitar com um PostgreSQL instalado no Windows
+    volumes: [banco:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+
+  migrar:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    image: portalvendas-api:local
+    command: ["node", "apps/api/dist/db/migrar.cli.js", "--seed"]
+    environment: *api-env
+    volumes: [dados:/dados]
+    depends_on: { db: { condition: service_healthy } }
+    restart: "no"
+
+  api:
+    image: portalvendas-api:local
+    environment: *api-env
+    ports: ["3000:3000"]
+    volumes: [dados:/dados]
+    depends_on:
+      migrar: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    image: portalvendas-web:local
+    ports: ["8080:80"]
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  banco:
+  dados:

@@ -1,0 +1,94 @@
+# Produção em um servidor com Docker (VPS, VM na nuvem ou servidor próprio).
+# As imagens vêm do GitHub Container Registry, publicadas pelo pipeline (cd.yml).
+#   VERSAO=v1.0.0 docker compose -f docker-compose.prod.yml up -d
+# Use deploy/implantar.sh: ele faz backup, migra, sobe e volta a versão anterior se o /health falhar.
+name: portalvendas
+
+x-api-env: &api-env
+  NODE_ENV: production
+  DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  SESSAO_SEGREDO: ${SESSAO_SEGREDO:?}
+  CHAVE_CIFRAGEM: ${CHAVE_CIFRAGEM:?}
+  URL_SITE: https://${DOMINIO}
+  NOME_LOJA: ${NOME_LOJA}
+  MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN:?}
+  MP_PUBLIC_KEY: ${MP_PUBLIC_KEY:?}
+  MP_SEGREDO_WEBHOOK: ${MP_SEGREDO_WEBHOOK:?}
+  MP_URL_NOTIFICACAO: https://${DOMINIO}/api/webhooks/mercadopago
+  ME_TOKEN: ${ME_TOKEN}
+  ME_URL_API: ${ME_URL_API:-https://melhorenvio.com.br}
+  ME_EMAIL_CONTATO: ${ME_EMAIL_CONTATO}
+  SMTP_HOST: ${SMTP_HOST:?}
+  SMTP_PORTA: ${SMTP_PORTA:-587}
+  SMTP_USUARIO: ${SMTP_USUARIO}
+  SMTP_SENHA: ${SMTP_SENHA}
+  SMTP_REMETENTE: ${SMTP_REMETENTE}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    volumes: [banco:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  migrar:
+    image: ${IMAGEM_API}:${VERSAO:-latest}
+    command: ["node", "apps/api/dist/db/migrar.cli.js"]
+    environment: *api-env
+    depends_on: { db: { condition: service_healthy } }
+    restart: "no"
+    profiles: ["migracao"]
+
+  api:
+    image: ${IMAGEM_API}:${VERSAO:-latest}
+    environment: *api-env
+    volumes: [dados:/dados]
+    depends_on: { db: { condition: service_healthy } }
+    restart: unless-stopped
+
+  web:
+    image: ${IMAGEM_WEB}:${VERSAO:-latest}
+    depends_on: [api]
+    restart: unless-stopped
+
+  # HTTPS automático (Let's Encrypt) + HSTS. Numa nuvem com balanceador próprio, pode ser removido.
+  proxy:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMINIO: ${DOMINIO}
+      EMAIL_TLS: ${EMAIL_TLS}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy:/data
+    depends_on: [web]
+    restart: unless-stopped
+
+  # Backup diário do banco (retenção de 14 dias). Copie a pasta ./backups para fora do servidor.
+  backup:
+    image: postgres:16-alpine
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [./backups:/backups]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          pg_dump -h db -U ${POSTGRES_USER} -d ${POSTGRES_DB} -Fc -f /backups/portal-$$(date +%Y%m%d-%H%M).dump && echo "backup ok"
+          find /backups -name 'portal-*.dump' -mtime +14 -delete
+          sleep 86400
+        done
+    depends_on: { db: { condition: service_healthy } }
+    restart: unless-stopped
+
+volumes:
+  banco:
+  dados:
+  caddy:

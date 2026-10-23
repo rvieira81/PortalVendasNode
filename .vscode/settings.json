@@ -1,0 +1,12 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "jest.rootPath": "apps/api",
+  "files.eol": "\n",
+  "editor.formatOnSave": false,
+  "files.exclude": {
+    "**/dist": true,
+    "**/coverage": true
+  },
+  "python.terminal.useEnvFile": true
+}

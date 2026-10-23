@@ -1,0 +1,51 @@
+# Servidor do front + proxy da API (mesma origem — ADR-001). O TLS termina antes (Caddy ou balanceador da nuvem).
+server_tokens off;
+map $http_x_forwarded_proto $protocolo {
+    default $http_x_forwarded_proto;
+    ""      $scheme;
+}
+map $http_x_request_id $id_requisicao {
+    default $http_x_request_id;
+    ""      $request_id;
+}
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    client_max_body_size 20m;   # até 8 fotos de 2 MB por envio
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(self)" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://sdk.mercadopago.com https://*.mercadopago.com https://*.mercadolibre.com https://*.mlstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.mlstatic.com; font-src 'self' data: https://fonts.gstatic.com https://*.mlstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.mercadopago.com https://*.mercadolibre.com https://*.mercadolivre.com https://*.mlstatic.com; frame-src https://*.mercadopago.com https://*.mercadolibre.com https://*.mercadolivre.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+
+    location = /saude-nginx { access_log off; return 200 "ok"; }
+
+    location /api/ {
+        proxy_pass http://${API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Request-Id $id_requisicao;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $protocolo;
+        proxy_read_timeout 60s;
+    }
+
+    # Arquivos com hash no nome: cache longo
+    location /assets/ {
+        expires 1y;   # add_header aqui anularia os cabeçalhos de segurança do server
+        try_files $uri =404;
+    }
+
+    # SPA: qualquer rota volta para o index.html, que nunca fica em cache
+    location / {
+        expires -1;   # Cache-Control: no-cache
+        try_files $uri /index.html;
+    }
+}

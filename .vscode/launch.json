@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API (depurar)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:debug", "-w", "apps/api"],
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "Loja no Chrome (depurar)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/apps/web",
+      "preLaunchTask": "Loja (dev)"
+    }
+  ],
+  "compounds": [
+    { "name": "API + Loja", "configurations": ["API (depurar)", "Loja no Chrome (depurar)"], "stopAll": true }
+  ]
+}

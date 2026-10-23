@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Banco (Docker)", "type": "shell", "command": "docker compose up -d db", "problemMatcher": [] },
+    { "label": "Migrar + dados de exemplo", "type": "shell", "command": "npm run db:seed", "problemMatcher": [] },
+    {
+      "label": "API (dev)", "type": "shell", "command": "npm run dev:api", "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x" }, "background": { "beginsPattern": "Starting compilation", "endsPattern": "Nest application successfully started" } }
+    },
+    {
+      "label": "Loja (dev)", "type": "shell", "command": "npm run dev:web", "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x" }, "background": { "beginsPattern": "VITE", "endsPattern": "Local:" } }
+    },
+    { "label": "Subir tudo", "dependsOn": ["Banco (Docker)", "API (dev)", "Loja (dev)"], "dependsOrder": "sequence", "problemMatcher": [] },
+    { "label": "Testes", "type": "shell", "command": "npm test", "group": { "kind": "test", "isDefault": true }, "problemMatcher": [] },
+    { "label": "Lint + tipos", "type": "shell", "command": "npm run lint; npm run typecheck", "problemMatcher": ["$tsc"] }
+  ]
+}

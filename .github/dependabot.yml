@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      nest: { patterns: ["@nestjs/*"] }
+      react: { patterns: ["react", "react-dom", "react-router", "@types/react*"] }
+  - package-ecosystem: docker
+    directories: ["/apps/api", "/apps/web"]
+    schedule: { interval: monthly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }

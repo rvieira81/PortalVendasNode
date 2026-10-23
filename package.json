@@ -1,0 +1,28 @@
+{
+  "name": "portal-vendas-node",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Portal de Vendas — React + NestJS + PostgreSQL",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:api": "npm run dev -w apps/api",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/api && npm run build -w apps/web",
+    "lint": "npm run lint -w apps/api && npm run lint -w apps/web",
+    "typecheck": "npm run typecheck -w apps/api && npm run typecheck -w apps/web",
+    "test": "npm test -w apps/api && npm test -w apps/web",
+    "db:migrar": "npm run db:migrar -w apps/api",
+    "db:seed": "npm run db:migrar -w apps/api -- --seed"
+  },
+  "overrides": {
+    "@nestjs/swagger": {
+      "js-yaml": "5.5.0"
+    }
+  }
+}
