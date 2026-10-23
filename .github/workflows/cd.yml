@@ -32,7 +32,7 @@ jobs:
     outputs:
       versao: ${{ steps.versao.outputs.versao }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: versao
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "versao=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"; else echo "versao=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"; fi
