@@ -2,7 +2,7 @@
 # API NestJS — build multi-stage. Contexto: raiz do repositório.
 #   docker build -f apps/api/Dockerfile -t portalvendas-api .
 
-FROM node:22-alpine AS dependencias
+FROM node:25-alpine AS dependencias
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
@@ -13,14 +13,14 @@ FROM dependencias AS build
 COPY apps/api apps/api
 RUN npm run build -w apps/api
 
-FROM node:22-alpine AS producao-deps
+FROM node:25-alpine AS producao-deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 RUN npm ci --workspace apps/api --omit=dev --no-audit --no-fund && npm cache clean --force
 
-FROM node:22-alpine
+FROM node:25-alpine
 ENV NODE_ENV=production \
     PORTA=3000 \
     MIGRACOES_DIR=/app/db \
